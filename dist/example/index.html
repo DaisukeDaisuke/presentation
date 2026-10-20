@@ -1,0 +1,32 @@
+<!doctype html>
+<!--
+発表ごとに独立したディレクトリを置く。本文はこのHTML、画像は各発表のassets/に置く。
+共通エンジンは../engine/。発表の追加ではエンジンを編集せず、トップの一覧へリンクを追加する。
+pageid = [月の1文字目][西暦の末尾1桁]c[発表回数][月の2文字目（あれば）]
+月はゼロ埋めしない。1〜9月は末尾を付けず、10〜12月は2文字目の0・1・2を末尾に付ける。
+2026年10月の第1回 → 1 + 6 + c + 1 + 0 = 16c10/
+2027年6月の第1回 → 6 + 7 + c + 1 = 67c1/
+2026年11月の第1回 → 16c11/、2026年12月の第1回 → 16c12/
+URLは一度公開した名前を維持する。
+-->
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>発表のひな形</title>
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../engine/style.css">
+<link rel="stylesheet" href="../engine/talk.css">
+<script src="../engine/presentation.js" defer></script>
+</head>
+<body class="talk">
+<presentation-deck aria-label="発表のひな形">
+  <deck-slide id="title"><section class="slide-body title-slide" tabindex="-1" aria-labelledby="title-heading"><h1 id="title-heading">発表タイトル</h1><p>発表者</p></section></deck-slide>
+  <deck-slide id="topic">
+    <section class="slide-body" tabindex="-1" aria-labelledby="topic-heading"><h2 id="topic-heading">見出し</h2><deck-fragment><p>最初の説明。</p></deck-fragment><deck-fragment><p>次の説明。</p></deck-fragment><p class="slide-bottom"><a href="#detail">↓ 補足</a></p></section>
+    <deck-slide id="detail"><section class="slide-body" tabindex="-1" aria-labelledby="detail-heading"><h2 id="detail-heading">補足</h2><deck-fragment><p>ここに詳しい説明を書きます。</p></deck-fragment><p class="slide-bottom"><a href="#topic">↑ 見出しへ戻る</a></p></section></deck-slide>
+  </deck-slide>
+</presentation-deck>
+<footer class="talk-controls"><div class="tools"><span class="position"><span data-slide-number>1</span> / 3</span><a href="../">発表一覧</a></div><nav class="navigation" aria-label="ページの方向移動"><deck-command command="left"><button type="button" aria-label="左">←</button></deck-command><deck-command command="up"><button type="button" aria-label="上">↑</button></deck-command><deck-command command="down"><button type="button" aria-label="下">↓</button></deck-command><deck-command command="right"><button type="button" aria-label="右">→</button></deck-command></nav></footer>
+</body>
+</html>

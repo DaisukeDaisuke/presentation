@@ -1,0 +1,9 @@
+/* Styles belonging to this talk, independent of the shared presentation engine. */
+.talk #timer .wide-media img{height:200px}
+.talk .case-slide table{font-size:22px;line-height:1.4}
+.talk .case-slide th,.talk .case-slide td{padding:7px 12px}
+.talk .case-slide .case-summary{font-size:25px;line-height:1.5;margin:24px 0 0}
+.talk #search ul{margin-bottom:14px}
+.talk #search li{font-size:30px;line-height:1.5;margin-bottom:0}
+.talk #camera p,.talk #row4 p,.talk #stack-residue p{font-size:30px;line-height:1.6}
+.talk #row4 .slide-bottom,.talk #stack-residue .slide-bottom{font-size:18px}

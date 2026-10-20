@@ -6,21 +6,22 @@
 <meta name="description" content="HTMLカスタムエレメントで作る階層型プレゼンテーション。ページ構造、共通JSコマンド、GitHub Pagesへの公開手順。">
 <title>実装方法 — BATTLE NOTES</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="engine/style.css">
 </head>
 <body class="docs">
-<header class="site-header"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>BATTLE<span>/ NOTES</span></a><nav class="header-actions"><a class="text-link" href="index.html">プレゼンテーションへ戻る ↗</a></nav></header>
+<header class="site-header"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>BATTLE<span>/ NOTES</span></a><nav class="header-actions"><a class="text-link" href="16c10/">プレゼンテーションへ戻る ↗</a></nav></header>
 <div class="docs-layout">
 <nav class="docs-nav" aria-label="実装方法の目次"><a href="#structure">01 基本構造</a><a href="#directions">02 階層と方向</a><a href="#commands">03 共通コマンド</a><a href="#behavior">04 操作・URL・印刷</a><a href="#publish">05 GitHub Pages</a><a href="#checks">06 検証</a><a href="#manuscript">07 原稿について</a></nav>
 <main>
 <p class="eyebrow">IMPLEMENTATION GUIDE <span>初稿 / BUILDLESS HTML + JS</span></p>
 <h1>構造をHTMLに。<br><em class="accent">操作を、共通JSに。</em></h1>
 <p>プレゼンテーションの文章は、すべてHTMLに直接記述します。JavaScriptは文章の生成やMarkdown変換を行わず、ページ・段階表示・移動先を制御します。本編は無地の濃い黒を背景にした1280×720のスライドを画面に合わせて縮小・拡大します。外部ライブラリ、ビルド、CDNは不要です。</p>
-<div class="demo-links"><a href="index.html#random">2階層の実例を見る →</a><a href="index.html#timer-note">3階層の実例を見る →</a><a href="demo.html">動作確認用の小さなデッキ →</a></div>
+<div class="demo-links"><a href="16c10/#random">2階層の実例を見る →</a><a href="16c10/#timer-note">3階層の実例を見る →</a><a href="example/">新しい発表のひな形 →</a><a href="demo.html">動作確認用の小さなデッキ →</a></div>
 <h2 id="structure">01 / 基本構造</h2>
 <p><code>&lt;presentation-deck&gt;</code>が1つのデッキ、<code>&lt;deck-slide&gt;</code>が1ページです。各ページの直下に<code>.slide-body</code>を1つ置き、本文と見出しを記述します。ページIDは文書全体で一意にしてください。1つのHTML文書につきデッキは1つです。</p>
-<pre><code>&lt;link rel="stylesheet" href="style.css"&gt;
-&lt;script src="presentation.js" defer&gt;&lt;/script&gt;
+<pre><code>&lt;link rel="stylesheet" href="../engine/style.css"&gt;
+&lt;link rel="stylesheet" href="../engine/talk.css"&gt;
+&lt;script src="../engine/presentation.js" defer&gt;&lt;/script&gt;
 &lt;presentation-deck&gt;
   &lt;deck-slide id="intro"&gt;
     &lt;section class="slide-body" tabindex="-1"
@@ -121,7 +122,7 @@
 document.querySelector('presentation-deck').command('goto', 'chapter-a');</code></pre>
 <h2 id="behavior">04 / 操作・URL・印刷</h2>
 <p><kbd>←</kbd> <kbd>→</kbd>は前後の段階、段階の端で同階層ページへ。<kbd>PageUp</kbd>・<kbd>PageDown</kbd>も同じ操作です。<kbd>↓</kbd>は補足、<kbd>↑</kbd>は親ページ。<kbd>Home</kbd>と<kbd>End</kbd>で最初と最後の章へ、<kbd>M</kbd>で目次、<kbd>F</kbd>で全画面表示を切り替えます。目次は<kbd>Esc</kbd>で閉じます。スマートフォンでは画面下部の方向ボタンを使用します。</p>
-<p>移動先と表示段階は<code>index.html#timer/1</code>のようにURLへ反映されます。段階を省略した<code>#timer</code>は初期表示です。直接アクセス、再読み込み、ブラウザーの戻る・進むで同じ状態を復元します。不正なページIDや壊れたエンコードは先頭ページへ戻します。</p>
+<p>移動先と表示段階は<code>16c10/#timer/1</code>のようにURLへ反映されます。段階を省略した<code>#timer</code>は初期表示です。直接アクセス、再読み込み、ブラウザーの戻る・進むで同じ状態を復元します。不正なページIDや壊れたエンコードは先頭ページへ戻します。</p>
 <p>入力欄、選択欄、編集可能領域、音声・動画プレーヤーではキー操作を横取りしません。独自の操作領域には<code>data-deck-keys="off"</code>を付けます。Ctrl/Alt/Meta/Shiftとの組み合わせ、IME変換中、長押しの反復入力も対象外です。</p>
 <pre><code>&lt;div tabindex="0" data-deck-keys="off"&gt;
   この領域を操作している間は、矢印キーでページを移動しない。
@@ -132,13 +133,17 @@ document.querySelector('presentation-deck').command('goto', 'chapter-a');</code>
 <ol><li>ソース一式をGitHubリポジトリに配置する。<code>.github/workflows/pages.yml</code>を含める。</li><li>リポジトリの <strong>Settings → Pages → Build and deployment → Source</strong> を <strong>GitHub Actions</strong> に設定する。</li><li><code>main</code>へpushするか、Actionsから「Deploy presentation to GitHub Pages」を手動実行する。既定ブランチが別名なら、ワークフローの<code>branches</code>も変更する。</li><li>検証ジョブの成功後に<code>dist/</code>がアップロードされ、<code>github-pages</code>環境へデプロイされる。ActionsのデプロイURLを確認する。</li></ol>
 <p>プルリクエストでは検証だけを行い、公開しません。手動デプロイは既定ブランチから実行した場合だけ有効です。検証ジョブはNode.js 22とPlaywrightを使い、公開物自体には依存ライブラリを含めません。</p>
 <pre><code>dist/
-  index.html             本編・目次・全本文
+  index.html             発表一覧
+  catalog.css            一覧の見た目
+  16c10/index.html        本編・目次・全本文
+  16c10/deck.css          この発表固有の見た目
+  16c10/assets/           この発表の説明図
+  example/index.html      新しい発表のひな形・命名例のコメント
   implementation.html    この説明ページ
   demo.html              階層・指定ジャンプの小さな実例
-  presentation.js        共通の操作コントローラー
-  style.css              レイアウト・レスポンシブ・印刷
-  talk.css               無地背景・固定スライド・段階表示
-  assets/                HTMLのimgから参照する説明図
+  engine/presentation.js 共通の操作コントローラー
+  engine/style.css       レイアウト・レスポンシブ・印刷
+  engine/talk.css        無地背景・固定スライド・段階表示
   favicon.svg
 manuscript/              元原稿（公開対象外）
 scripts/validate.mjs     UTF-8・構造・リンクの検証
@@ -153,7 +158,7 @@ playwright.config.js     PC・モバイル・サブパス検証設定
 <a class="branch-link" href="demo.html">小さなデッキで操作する →</a>
 <h2 id="manuscript">07 / 原稿について</h2>
 <p>元の<code>battleemulator.md</code>と<code>battleemulatorv2.txt</code>は、変更せず<code>manuscript/</code>へ残しています。記事は後者を主に使い、発表しやすい10章と補足ページへ再構成しました。原稿の性能値や成果を新しい検証結果として扱わず、原稿内で表記が食い違うタイマーの数値には注記を添えています。</p>
-<p>本文を変更するときは<code>index.html</code>を編集してください。JavaScriptへの本文追加は不要です。</p>
+<p>発表本文は<code>16c10/index.html</code>、一覧は<code>index.html</code>を編集します。新しい発表は<code>example/</code>を別名で複製し、一覧に通常のリンクを追加します。共通の<code>engine/</code>へ本文や発表IDを登録する必要はありません。</p>
 </main>
 </div>
 </body>

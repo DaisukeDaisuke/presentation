@@ -1,4 +1,4 @@
-/* Text stays in HTML. This controller only changes presentation state. */
+/* Shared engine: text and deck-specific content stay in each presentation's HTML. */
 class DeckSlide extends HTMLElement {}
 class DeckFragment extends HTMLElement {}
 class DeckCommand extends HTMLElement {
