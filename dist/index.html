@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#191919">
+<meta name="description" content="DQ9バトルエミュレーターの開発発表。矢印キーで本文と図を段階表示するHTMLプレゼンテーション。">
+<title>バトルエミュレーター — DQ9一人旅RTA</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="talk.css">
+<script src="presentation.js" defer></script>
+</head>
+<body class="talk">
+<noscript><p>JavaScriptが無効のため、全ページと全段階を表示します。</p></noscript>
+<presentation-deck aria-label="Battle Emulator プレゼンテーション">
+<deck-slide id="intro">
+  <section class="slide-body title-slide" tabindex="-1" aria-labelledby="intro-title">
+    <h1 id="intro-title">バトルエミュレーター</h1>
+    <p>DQ9一人旅RTAの乱数を予測する</p>
+    <p class="presenter">DaisukeDaisuke</p>
+    <p class="hint">→ で進む　← で戻る　↓ 補足　↑ 親ページ</p>
+  </section>
+</deck-slide>
+<deck-slide id="origin">
+  <section class="slide-body" tabindex="-1" aria-labelledby="origin-title">
+    <h2 id="origin-title">開発のきっかけ</h2>
+    <deck-fragment><ul><li>DQ9一人旅RTAは、ボス戦での敗北がリセットにつながる</li></ul></deck-fragment>
+    <deck-fragment><ul><li>2024年3月26日、ある走者が1人旅RTA中にイシュダルで7敗した</li></ul></deck-fragment>
+    <deck-fragment><ul><li>「48bitの巨大な壁」<br>CPU周波数で決まるもので、48bitを総当たりしなければならないと思われていた</li></ul></deck-fragment>
+    <deck-fragment><p><strong>本当に乱数調整はできないのか？</strong></p></deck-fragment>
+    <p class="slide-bottom"><a href="#timeline">↓ 試作から完成まで</a></p>
+  </section>
+  <deck-slide id="timeline">
+    <section class="slide-body" tabindex="-1" aria-labelledby="timeline-title">
+      <h2 id="timeline-title">試作から完成まで</h2>
+      <deck-fragment><ul class="timeline-list"><li><time>2024年3月</time><span>Cテーブルの乱数調整を考え始めた</span></li></ul></deck-fragment>
+      <deck-fragment><ul class="timeline-list"><li><time>2024年10月</time><span>イシュダルの試作が完成<br>総当たりに14秒。表示も粗削りだった</span></li></ul></deck-fragment>
+      <deck-fragment><ul class="timeline-list"><li><time>その後</time><span>バグで数か月お蔵入りに<br>再び敗北を見て開発を再開し、完成させた</span></li></ul></deck-fragment>
+      <p class="slide-bottom"><a href="#origin">↑ 開発のきっかけへ戻る</a></p>
+    </section>
+  </deck-slide>
+</deck-slide>
+<deck-slide id="random">
+  <section class="slide-body" tabindex="-1" aria-labelledby="random-title">
+    <h2 id="random-title">Cテーブル</h2>
+    <deck-fragment><ul><li>内部名は「battle」。64bitのLCG（線形合同法）</li></ul></deck-fragment>
+    <deck-fragment><ul><li>初期シードは、ゲーム起動から進み続けるタイマーの値に由来する</li></ul></deck-fragment>
+    <deck-fragment><ul><li>戦闘中にシードを取り直したり、入れ替えたりしない</li></ul></deck-fragment>
+    <deck-fragment><p><strong>同じ初期状態・同じ処理なら、同じ乱数列になる</strong></p></deck-fragment>
+    <p class="slide-bottom"><a href="#timer">↓ ゲーム内タイマー</a></p>
+  </section>
+  <deck-slide id="timer">
+    <section class="slide-body" tabindex="-1" aria-labelledby="timer-title">
+      <h2 id="timer-title">ゲーム内タイマー</h2>
+      <deck-fragment><p>DSのタイマーの基準クロック ÷ 64<br><strong>1秒間に約52万回進む</strong></p></deck-fragment>
+      <deck-fragment><figure class="media wide-media"><img src="assets/timer.svg" alt="16bitのソフトウェア側の計数と32bitのハードウェアタイマーを合わせて48bitを構成する図"><figcaption>ソフトウェア側の計数 ＋ ハードウェアタイマー</figcaption></figure></deck-fragment>
+      <deck-fragment><p>起動からの経過時間で、<strong>値の範囲を絞れる</strong></p></deck-fragment>
+      <p class="slide-bottom"><a href="#timer-note">↓ 起動からの経過時間とタイマー</a></p>
+    </section>
+    <deck-slide id="timer-note">
+      <section class="slide-body" tabindex="-1" aria-labelledby="timer-note-title">
+        <h2 id="timer-note-title">起動からの経過時間とタイマー</h2>
+        <deck-fragment><p>ゲーム起動時から、タイマーは一定の速さで進む。</p><p class="equation">約33.5 MHz ÷ 64 ≈ 約52万回 / 秒</p></deck-fragment>
+        <deck-fragment><p>初期シードは、このタイマーの値に由来する。</p></deck-fragment>
+        <deck-fragment><p><strong>起動から何秒たったか</strong>が分かれば、<br>初期シードの候補範囲を逆算できる。</p></deck-fragment>
+        <p class="slide-bottom"><a href="#timer">↑ ゲーム内タイマーへ戻る</a></p>
+      </section>
+    </deck-slide>
+  </deck-slide>
+</deck-slide>
+<deck-slide id="seed">
+  <section class="slide-body" tabindex="-1" aria-labelledby="seed-title">
+    <h2 id="seed-title">シード値の逆算</h2>
+    <deck-fragment><p>初期シードは、ゲーム起動から進むタイマーに由来する。<br>起動からの経過時間が分かれば、候補範囲を推定できる。</p></deck-fragment>
+    <deck-fragment><figure class="media wide-media"><img src="assets/seed-range.svg" alt="48bit全体の値の範囲から、時刻の情報を用いて狭い候補範囲を取り出す図"><figcaption>時刻のずれを見込んで、その周辺だけを調べる</figcaption></figure></deck-fragment>
+    <deck-fragment><p><strong>48bit全体を総当たりする必要はない！</strong></p></deck-fragment>
+  </section>
+</deck-slide>
+<deck-slide id="identify">
+  <section class="slide-body" tabindex="-1" aria-labelledby="identify-title">
+    <h2 id="identify-title">シード値の特定</h2>
+    <deck-fragment><ul><li>実際の戦闘で起きた行動を観測する</li></ul></deck-fragment>
+    <deck-fragment><ul><li>候補範囲のシードで戦闘を再現し、観測結果と照合する</li></ul></deck-fragment>
+    <deck-fragment><ul><li>1,400万ターン / 秒の処理性能を使って総当たり</li></ul></deck-fragment>
+    <deck-fragment><p>試作時の14秒から、<strong>約1秒での特定へ</strong></p></deck-fragment>
+    <p class="slide-bottom"><a href="#parser">↓ 観測結果を入力するパーサー</a>　<span>性能値は元原稿の記録</span></p>
+  </section>
+  <deck-slide id="parser">
+    <section class="slide-body" tabindex="-1" aria-labelledby="parser-title">
+      <h2 id="parser-title">引数パーサー</h2>
+      <deck-fragment><p>総当たりのためには、戦闘中に起きた行動をエミュレーターへ入力する必要がある。</p></deck-fragment>
+      <deck-fragment><figure class="media wide-media"><img src="assets/observation.svg" alt="戦闘の観測、行動の入力、パーサー、候補との照合の順につながる処理図"></figure></deck-fragment>
+      <deck-fragment><p>イシュダルとパンデルムでは、専用の入力パーサーを作成した。</p></deck-fragment>
+      <p class="slide-bottom"><a href="#identify">↑ シード値の特定へ戻る</a></p>
+    </section>
+  </deck-slide>
+</deck-slide>
+<deck-slide id="search">
+  <section class="slide-body" tabindex="-1" aria-labelledby="search-title">
+    <h2 id="search-title">勝利手順の探索</h2>
+    <p>シードが分かれば、候補の行動列を試せる。</p>
+    <deck-fragment><ul><li>v1：行動を1つ変えるだけのアルゴリズム</li></ul></deck-fragment>
+    <deck-fragment><ul><li>v2：最良優先探索</li></ul></deck-fragment>
+    <deck-fragment><ul><li>v4：A*アルゴリズム</li></ul></deck-fragment>
+    <deck-fragment><ul><li>v6：A* ＋ 遺伝的アルゴリズムによるパラメータ最適化</li></ul></deck-fragment>
+    <deck-fragment><ul><li>v9：GPT-6 Proが書いたアルゴリズム</li></ul></deck-fragment>
+    <p class="slide-bottom"><a href="#tactics">↓ 探索が見つけた戦法</a></p>
+  </section>
+  <deck-slide id="tactics">
+    <section class="slide-body" tabindex="-1" aria-labelledby="tactics-title">
+      <h2 id="tactics-title">探索が見つけた戦法</h2>
+      <deck-fragment><h3>会心連発戦法</h3><p>会心の一撃が連続するような行動列を選ぶ。</p></deck-fragment>
+      <deck-fragment><h3>カウンター会心戦法</h3><p>敵の攻撃タイミングとカウンターを組み合わせる。</p></deck-fragment>
+      <deck-fragment><p><strong>人力では思いつきにくい手順も、探索の対象にできる。</strong></p></deck-fragment>
+      <p class="slide-bottom"><a href="#search">↑ 勝利手順の探索へ戻る</a></p>
+    </section>
+  </deck-slide>
+</deck-slide>
+<deck-slide id="variants">
+  <section class="slide-body" tabindex="-1" aria-labelledby="variants-title">
+    <h2 id="variants-title">対応ボスを増やす</h2>
+    <div class="two-col">
+      <deck-fragment><ul><li>レオコーン</li><li>イシュダル</li><li>パンデルム</li><li>ジャダーマ</li><li>ぬしさま</li></ul></deck-fragment>
+      <deck-fragment><ul><li>ズオー</li><li>アノン</li><li>シャルマナ</li><li>エルシオン</li><li>エルギオス</li></ul></deck-fragment>
+    </div>
+    <p class="slide-bottom">元原稿に挙げられたバリアント</p>
+  </section>
+</deck-slide>
+<deck-slide id="vision">
+  <section class="slide-body" tabindex="-1" aria-labelledby="vision-title">
+    <h2 id="vision-title">映像認識</h2>
+    <deck-fragment><p>終盤は戦闘が速くなり、人間が正確に入力し続けることが難しくなる。</p></deck-fragment>
+    <deck-fragment><figure class="media wide-media"><img src="assets/vision.svg" alt="戦闘映像から行動を認識し、シードの照合と勝利手順の探索につなげる図"></figure></deck-fragment>
+    <deck-fragment><p><strong>エルギオス戦では映像認識による自動化を実用化した。</strong></p></deck-fragment>
+  </section>
+</deck-slide>
+<deck-slide id="impact">
+  <section class="slide-body" tabindex="-1" aria-labelledby="impact-title">
+    <h2 id="impact-title">RTAに何をもたらしたか</h2>
+    <deck-fragment><ul><li>シード特定後は、ほぼ100%勝利できるようになった</li></ul></deck-fragment>
+    <deck-fragment><ul><li>必要な行動が分かり、不要なレベル上げを省けるようになった</li></ul></deck-fragment>
+    <deck-fragment><p>実際にRTA走者が<strong>40分の短縮</strong>を達成した。</p></deck-fragment>
+    <p class="slide-bottom"><a href="#case">↓ イシュダル戦の具体例</a>　<span>勝率・短縮時間は元原稿の報告</span></p>
+  </section>
+  <deck-slide id="case">
+    <section class="slide-body compact case-slide" tabindex="-1" aria-labelledby="case-title">
+      <h2 id="case-title">イシュダル戦の具体例</h2>
+      <p class="small-note">seed: 0x85715c7 ／ 探索時間: 692ms ／ 約7億ターン探索（原稿記載値）</p>
+      <deck-fragment><div class="table-wrap" role="region" aria-label="イシュダル戦の抜粋"><table><thead><tr><th>ターン</th><th>味方の行動</th><th>敵の行動</th><th>敵HP</th></tr></thead><tbody><tr><td>8</td><td><strong>Acrobatic Star</strong></td><td>HP Hoover</td><td>262 → 262</td></tr><tr><td>9</td><td>Attack</td><td>HP Hoover</td><td>262 → 246</td></tr><tr><td>12</td><td>Attack</td><td>HP Hoover</td><td>216 → 154</td></tr><tr><td>16</td><td>Attack（先制）</td><td>HP Hoover</td><td>109 → 51</td></tr><tr><td>17</td><td>Dragon Slash（先制）</td><td>Puff Puff</td><td>51 → 36</td></tr><tr><td>18</td><td>Attack</td><td>Puff Puff</td><td><strong>36 → 0</strong></td></tr></tbody></table></div></deck-fragment>
+      <deck-fragment><p class="case-summary">ターン8のアクロバットスターが、<br>その後の回避・カウンターにつながる布石になる。</p></deck-fragment>
+      <p class="slide-bottom"><a href="#impact">↑ RTAへの効果へ戻る</a>　全18ターンのうち6行を抜粋</p>
+    </section>
+  </deck-slide>
+</deck-slide>
+<deck-slide id="future">
+  <section class="slide-body" tabindex="-1" aria-labelledby="future-title">
+    <h2 id="future-title">今後</h2>
+    <deck-fragment><ul><li>さらなる自動化・精度向上</li></ul></deck-fragment>
+    <deck-fragment><ul><li>ほかのボス・カテゴリへの拡大</li></ul></deck-fragment>
+    <deck-fragment><ul><li>解析ツールから、走者の実戦支援ツールへ</li></ul></deck-fragment>
+    <deck-fragment><p style="margin-top:52px">ありがとうございました。</p></deck-fragment>
+    <p class="slide-bottom"><a href="#intro">最初に戻る</a></p>
+  </section>
+</deck-slide>
+</presentation-deck>
+<footer class="talk-controls">
+  <div class="tools"><span class="position"><span data-slide-number>1</span> / 16</span><deck-command command="overview"><button type="button">目次</button></deck-command><deck-command command="fullscreen"><button type="button" aria-label="全画面表示を切り替え">全画面</button></deck-command></div>
+  <nav class="navigation" aria-label="ページの方向移動"><deck-command command="left"><button type="button" aria-label="左：前の段階・ページ">←</button></deck-command><div class="vertical"><deck-command command="up"><button type="button" aria-label="上：親ページ">↑</button></deck-command><deck-command command="down"><button type="button" aria-label="下：子ページ">↓</button></deck-command></div><deck-command command="right"><button type="button" aria-label="右：次の段階・ページ">→</button></deck-command></nav>
+</footer>
+<p class="screen-note" data-fullscreen-error hidden>この環境では全画面表示を開始できません。</p>
+<dialog id="deck-map" aria-labelledby="map-title"><div class="dialog-head"><div><h2 id="map-title">目次</h2><p>↓ 補足ページへ　↑ 親ページへ　Esc 閉じる</p></div><deck-command command="close"><button type="button" aria-label="目次を閉じる">×</button></deck-command></div>
+<ol class="map-grid">
+<li><a href="#intro">バトルエミュレーター</a></li>
+<li><a href="#origin">開発のきっかけ</a><ul><li><a href="#timeline">試作から完成まで</a></li></ul></li>
+<li><a href="#random">Cテーブル</a><ul><li><a href="#timer">ゲーム内タイマー</a><ul><li><a href="#timer-note">起動からの経過時間とタイマー</a></li></ul></li></ul></li>
+<li><a href="#seed">シード値の逆算</a></li>
+<li><a href="#identify">シード値の特定</a><ul><li><a href="#parser">引数パーサー</a></li></ul></li>
+<li><a href="#search">勝利手順の探索</a><ul><li><a href="#tactics">探索が見つけた戦法</a></li></ul></li>
+<li><a href="#variants">対応ボスを増やす</a></li>
+<li><a href="#vision">映像認識</a></li>
+<li><a href="#impact">RTAに何をもたらしたか</a><ul><li><a href="#case">イシュダル戦の具体例</a></li></ul></li>
+<li><a href="#future">今後</a></li>
+</ol></dialog>
+</body>
+</html>

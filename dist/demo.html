@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>階層移動デモ — BATTLE NOTES</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<script src="presentation.js" defer></script>
+</head>
+<body>
+<header class="site-header"><a class="brand" href="index.html">BATTLE<span>/ NOTES</span></a><nav class="header-actions"><a href="implementation.html">実装方法へ戻る ↗</a></nav></header>
+<div class="layout">
+<nav class="chapter-nav" aria-label="章へジャンプ"><a href="#a" aria-label="本筋A">01</a><a href="#b" aria-label="本筋B">02</a></nav>
+<presentation-deck aria-label="階層移動のデモ">
+  <deck-slide id="a"><section class="slide-body" tabindex="-1" aria-labelledby="a-title"><p class="eyebrow">01 / DEMO</p><h1 id="a-title">本筋 A</h1><p class="lead">↓で補足 A1へ。→で本筋 Bへ。<br>補足 A1から→で補足 A2へ進めます。</p><label for="key-input">入力欄では矢印キーを横取りしません</label><input id="key-input" type="text" value="ここでカーソルを移動" style="padding:12px;margin:15px 0 25px;max-width:420px;font:inherit;background:var(--panel);color:var(--ink);border:1px solid var(--line)"><deck-command command="goto" to="deep"><button class="primary" type="button">3階層目へ直接ジャンプ →</button></deck-command></section>
+    <deck-slide id="a1"><section class="slide-body" tabindex="-1" aria-labelledby="a1-title"><p class="eyebrow">01.1 / DEMO</p><h2 id="a1-title">補足 A1</h2><p class="lead">↑で本筋 Aへ、→で補足 A2へ。<br>↓で3階層目へ進みます。</p></section>
+      <deck-slide id="deep"><section class="slide-body" tabindex="-1" aria-labelledby="deep-title"><p class="eyebrow">01.1.1 / DEMO</p><h2 id="deep-title">3階層目</h2><p class="lead">↑で補足 A1へ戻ります。<br>左右に兄弟ページがないため、←→では移動しません。</p></section></deck-slide>
+    </deck-slide>
+    <deck-slide id="a2" right="b"><section class="slide-body" tabindex="-1" aria-labelledby="a2-title"><p class="eyebrow">01.2 / DEMO</p><h2 id="a2-title">補足 A2</h2><p class="lead">←で補足 A1へ。↑で本筋 Aへ。<br><code>right="b"</code>により、→で本筋 Bへジャンプします。</p></section></deck-slide>
+  </deck-slide>
+  <deck-slide id="b" down="a2"><section class="slide-body" tabindex="-1" aria-labelledby="b-title"><p class="eyebrow">02 / DEMO</p><h2 id="b-title">本筋 B</h2><p class="lead">←で本筋 Aへ。<br><code>down="a2"</code>により、↓で補足 A2へジャンプします。</p><a class="branch-link" href="implementation.html">実装方法へ戻る ↗</a></section></deck-slide>
+</presentation-deck>
+</div>
+<footer class="site-footer"><div class="page-count"><strong data-page-number>01</strong> / 02 <span data-branch-marker hidden>↳ 補足</span></div><nav class="navigation" aria-label="ページの方向移動"><deck-command command="left"><button type="button" aria-label="左">←</button></deck-command><deck-command command="up"><button type="button" aria-label="上">↑</button></deck-command><deck-command command="down"><button type="button" aria-label="下">↓</button></deck-command><deck-command command="right"><button type="button" aria-label="右">→</button></deck-command></nav></footer>
+</body>
+</html>

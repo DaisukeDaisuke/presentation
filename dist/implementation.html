@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="HTMLカスタムエレメントで作る階層型プレゼンテーション。ページ構造、共通JSコマンド、GitHub Pagesへの公開手順。">
+<title>実装方法 — BATTLE NOTES</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="docs">
+<header class="site-header"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>BATTLE<span>/ NOTES</span></a><nav class="header-actions"><a class="text-link" href="index.html">プレゼンテーションへ戻る ↗</a></nav></header>
+<div class="docs-layout">
+<nav class="docs-nav" aria-label="実装方法の目次"><a href="#structure">01 基本構造</a><a href="#directions">02 階層と方向</a><a href="#commands">03 共通コマンド</a><a href="#behavior">04 操作・URL・印刷</a><a href="#publish">05 GitHub Pages</a><a href="#checks">06 検証</a><a href="#manuscript">07 原稿について</a></nav>
+<main>
+<p class="eyebrow">IMPLEMENTATION GUIDE <span>初稿 / BUILDLESS HTML + JS</span></p>
+<h1>構造をHTMLに。<br><em class="accent">操作を、共通JSに。</em></h1>
+<p>プレゼンテーションの文章は、すべてHTMLに直接記述します。JavaScriptは文章の生成やMarkdown変換を行わず、ページ・段階表示・移動先を制御します。本編は無地の濃い黒を背景にした1280×720のスライドを画面に合わせて縮小・拡大します。外部ライブラリ、ビルド、CDNは不要です。</p>
+<div class="demo-links"><a href="index.html#random">2階層の実例を見る →</a><a href="index.html#timer-note">3階層の実例を見る →</a><a href="demo.html">動作確認用の小さなデッキ →</a></div>
+<h2 id="structure">01 / 基本構造</h2>
+<p><code>&lt;presentation-deck&gt;</code>が1つのデッキ、<code>&lt;deck-slide&gt;</code>が1ページです。各ページの直下に<code>.slide-body</code>を1つ置き、本文と見出しを記述します。ページIDは文書全体で一意にしてください。1つのHTML文書につきデッキは1つです。</p>
+<pre><code>&lt;link rel="stylesheet" href="style.css"&gt;
+&lt;script src="presentation.js" defer&gt;&lt;/script&gt;
+&lt;presentation-deck&gt;
+  &lt;deck-slide id="intro"&gt;
+    &lt;section class="slide-body" tabindex="-1"
+             aria-labelledby="intro-title"&gt;
+      &lt;h1 id="intro-title"&gt;プレゼンテーションのタイトル&lt;/h1&gt;
+      &lt;p&gt;文章は、このHTMLに直接書く。&lt;/p&gt;
+    &lt;/section&gt;
+  &lt;/deck-slide&gt;
+  &lt;deck-slide id="chapter-1"&gt;
+    &lt;section class="slide-body" tabindex="-1"
+             aria-labelledby="chapter-1-title"&gt;
+      &lt;h2 id="chapter-1-title"&gt;最初の章&lt;/h2&gt;
+      &lt;p&gt;→で進んだ先のページ。&lt;/p&gt;
+    &lt;/section&gt;
+  &lt;/deck-slide&gt;
+&lt;/presentation-deck&gt;</code></pre>
+<p>この実装ではShadow DOMを使いません。本文は通常のDOMとして残ります。発表用の固定画面を使う場合は、共通CSSの後に<code>talk.css</code>を読み込み、<code>&lt;body class="talk"&gt;</code>としてください。</p>
+<h3>→を押すたびに文章や画像を増やす</h3>
+<p>見出しはそのまま置き、後から表示する内容を<code>&lt;deck-fragment&gt;</code>で囲みます。最初は見出しだけが見え、→を押すたびに次の要素が現れます。全部表示された後の→で次の同階層ページへ進みます。←では直前の要素を隠し、最初の状態からさらに←で前ページの最終表示状態へ戻ります。</p>
+<pre><code>&lt;deck-slide id="topic"&gt;
+  &lt;section class="slide-body" tabindex="-1"&gt;
+    &lt;h2&gt;シード値の逆算&lt;/h2&gt;
+    &lt;deck-fragment&gt;
+      &lt;p&gt;初期シードはタイマーから取得する。&lt;/p&gt;
+    &lt;/deck-fragment&gt;
+    &lt;deck-fragment&gt;
+      &lt;img src="assets/seed-range.svg" alt="候補範囲の図"&gt;
+    &lt;/deck-fragment&gt;
+    &lt;deck-fragment&gt;
+      &lt;p&gt;48bit全体を調べる必要はない。&lt;/p&gt;
+    &lt;/deck-fragment&gt;
+  &lt;/section&gt;
+&lt;/deck-slide&gt;</code></pre>
+<p>段階表示は文章・箇条書き・画像・表・動画をまとめて囲めます。通常はDOM順です。<code>step="1"</code>のように正の整数を指定すると表示順を明示でき、同じ番号の要素は同時に表示されます。番号指定と省略を混ぜず、<code>deck-fragment</code>同士も入れ子にしないでください。1つの要素に複数の段落や画像を入れることはできます。</p>
+<pre><code>&lt;div class="two-col"&gt;
+  &lt;deck-fragment step="1"&gt;
+    &lt;img src="assets/timer.svg" alt="タイマー構造"&gt;
+  &lt;/deck-fragment&gt;
+  &lt;deck-fragment step="1"&gt;
+    &lt;p&gt;この説明と画像は同時に表示される。&lt;/p&gt;
+  &lt;/deck-fragment&gt;
+&lt;/div&gt;</code></pre>
+<p>表示前の要素はレイアウト上の場所を保ち、操作・読み上げの対象から外れます。本文や画像は後からJSで追加していません。全表示状態でスライド内に収まるように作成してください。幅の狭い端末でもスライドの配置は保ち、画面全体に合わせて縮小します。</p>
+<h2 id="directions">02 / ネストが、そのままページの階層になる</h2>
+<p>補足ページの<code>&lt;deck-slide&gt;</code>は、親の<code>.slide-body</code>の中ではなく、その次に置きます。親の<code>&lt;deck-slide&gt;</code>の直接の子にすることで、↑↓の関係が決まります。</p>
+<pre><code>&lt;presentation-deck&gt;
+  &lt;deck-slide id="chapter-a"&gt;
+    &lt;section class="slide-body" tabindex="-1"&gt;
+      &lt;h2&gt;本筋 A&lt;/h2&gt;
+    &lt;/section&gt;
+    &lt;deck-slide id="detail-a"&gt;
+      &lt;section class="slide-body" tabindex="-1"&gt;
+        &lt;h2&gt;補足 A：↓でここへ、↑で本筋 Aへ&lt;/h2&gt;
+      &lt;/section&gt;
+      &lt;deck-slide id="deep-a"&gt;
+        &lt;section class="slide-body" tabindex="-1"&gt;
+          &lt;h2&gt;さらに深い補足&lt;/h2&gt;
+        &lt;/section&gt;
+      &lt;/deck-slide&gt;
+    &lt;/deck-slide&gt;
+    &lt;deck-slide id="detail-b"&gt;
+      &lt;section class="slide-body" tabindex="-1"&gt;
+        &lt;h2&gt;補足 B：補足 Aから→で移動&lt;/h2&gt;
+      &lt;/section&gt;
+    &lt;/deck-slide&gt;
+  &lt;/deck-slide&gt;
+  &lt;deck-slide id="chapter-b"&gt;
+    &lt;section class="slide-body" tabindex="-1"&gt;
+      &lt;h2&gt;本筋 B&lt;/h2&gt;
+    &lt;/section&gt;
+  &lt;/deck-slide&gt;
+&lt;/presentation-deck&gt;</code></pre>
+<table><thead><tr><th>キー</th><th>標準の動作</th></tr></thead><tbody><tr><td>→</td><td>次の段階を表示。すべて表示済みなら同じ親を持つ次のページへ。</td></tr><tr><td>←</td><td>直前の段階を隠す。最初の段階なら同じ親を持つ前のページを全表示状態で開く。</td></tr><tr><td>↓</td><td>直下の最初の子ページへ移り、前回の表示段階を復元する。</td></tr><tr><td>↑</td><td>直接の親ページへ移り、前回の表示段階を復元する。最上位では移動しない。</td></tr></tbody></table>
+<h3>方向ごとのジャンプ先を明示する</h3>
+<p><code>left</code>・<code>right</code>・<code>up</code>・<code>down</code>属性にページIDを書くと、その方向の標準ルールを上書きします。IDに<code>#</code>は付けません。<code>none</code>でその方向を無効化できます。移動先からの逆方向は自動追加されないため、往復させる場合は両側に設定してください。</p>
+<pre><code>&lt;deck-slide id="appendix" up="chapter-a" right="chapter-b" down="none"&gt;
+  &lt;section class="slide-body" tabindex="-1"&gt;
+    &lt;h2&gt;任意のページへつなぐ補足&lt;/h2&gt;
+  &lt;/section&gt;
+&lt;/deck-slide&gt;</code></pre>
+<p>存在しないIDも実行時には移動しませんが、入力ミスとしてCIの検証でエラーになります。ページを増やしたら、HTML内の章ナビゲーション、目次、総章数も合わせて編集してください。</p>
+<h2 id="commands">03 / コマンドもHTMLで宣言する</h2>
+<p><code>&lt;deck-command&gt;</code>の中に通常の<code>&lt;button type="button"&gt;</code>を置きます。クリックとEnter/Spaceによる起動は標準のボタンに任せ、共通JSが<code>command</code>属性を解釈します。</p>
+<pre><code>&lt;deck-command command="right"&gt;
+  &lt;button type="button"&gt;次のページ →&lt;/button&gt;
+&lt;/deck-command&gt;
+&lt;deck-command command="goto" to="detail-a"&gt;
+  &lt;button type="button"&gt;補足 Aへジャンプ&lt;/button&gt;
+&lt;/deck-command&gt;
+&lt;a href="#detail-a"&gt;通常のリンクでも移動できる&lt;/a&gt;</code></pre>
+<table><thead><tr><th>command</th><th>動作</th></tr></thead><tbody><tr><td>left / right</td><td>前／次の段階。段階の端では前／次の同階層ページへ。</td></tr><tr><td>previous / next</td><td>left / rightの別名。</td></tr><tr><td>up / down</td><td>親／子ページへ。前回の表示段階を復元する。移動先がなければボタンは無効。</td></tr><tr><td>goto</td><td><code>to="ページID"</code>で指定したページを前回の表示段階で開く。</td></tr><tr><td>home / end</td><td>最上位の最初／最後のページを初期表示で開く。</td></tr><tr><td>overview / close</td><td><code>id="deck-map"</code>のdialogを開く／閉じる。</td></tr><tr><td>fullscreen</td><td>ブラウザーの全画面表示を切り替える。</td></tr></tbody></table>
+<p>目次の文章やリンクもHTML側に記述します。<code>&lt;dialog id="deck-map"&gt;</code>の内部にページへのリンクを置けば、選択時にジャンプして目次が閉じます。移動通知が必要な場合のみ、JSの<code>slidechange</code>イベントを利用できます。</p>
+<pre><code>document.querySelector('presentation-deck')
+  .addEventListener('slidechange', event =&gt; {
+    console.log(event.detail.id, event.detail.root);
+  });
+// 外部JSからも同じコマンドを使える。
+document.querySelector('presentation-deck').command('goto', 'chapter-a');</code></pre>
+<h2 id="behavior">04 / 操作・URL・印刷</h2>
+<p><kbd>←</kbd> <kbd>→</kbd>は前後の段階、段階の端で同階層ページへ。<kbd>PageUp</kbd>・<kbd>PageDown</kbd>も同じ操作です。<kbd>↓</kbd>は補足、<kbd>↑</kbd>は親ページ。<kbd>Home</kbd>と<kbd>End</kbd>で最初と最後の章へ、<kbd>M</kbd>で目次、<kbd>F</kbd>で全画面表示を切り替えます。目次は<kbd>Esc</kbd>で閉じます。スマートフォンでは画面下部の方向ボタンを使用します。</p>
+<p>移動先と表示段階は<code>index.html#timer/1</code>のようにURLへ反映されます。段階を省略した<code>#timer</code>は初期表示です。直接アクセス、再読み込み、ブラウザーの戻る・進むで同じ状態を復元します。不正なページIDや壊れたエンコードは先頭ページへ戻します。</p>
+<p>入力欄、選択欄、編集可能領域、音声・動画プレーヤーではキー操作を横取りしません。独自の操作領域には<code>data-deck-keys="off"</code>を付けます。Ctrl/Alt/Meta/Shiftとの組み合わせ、IME変換中、長押しの反復入力も対象外です。</p>
+<pre><code>&lt;div tabindex="0" data-deck-keys="off"&gt;
+  この領域を操作している間は、矢印キーでページを移動しない。
+&lt;/div&gt;</code></pre>
+<p>→で追加する本文・画像と、→・↓の移動先ページは240msでフェードインします。←・↑で戻る際は即時表示します。動きを減らす設定ではフェードしません。各ページの表示段階はページを開いている間保持します。印刷時には表示前の段階も含めてすべての本文を表示し、ページごとに改ページします。JavaScriptが無効でも全本文を順番に読むことができます。</p>
+<h2 id="publish">05 / GitHub Pagesへ公開する</h2>
+<p>公開対象は<code>dist/</code>だけです。SitesとGitHub Pagesで同じHTML・CSS・JSを使います。URLは相対パスなので、<code>https://owner.github.io/repository/</code>のようなサブディレクトリでも動作します。</p>
+<ol><li>ソース一式をGitHubリポジトリに配置する。<code>.github/workflows/pages.yml</code>を含める。</li><li>リポジトリの <strong>Settings → Pages → Build and deployment → Source</strong> を <strong>GitHub Actions</strong> に設定する。</li><li><code>main</code>へpushするか、Actionsから「Deploy presentation to GitHub Pages」を手動実行する。既定ブランチが別名なら、ワークフローの<code>branches</code>も変更する。</li><li>検証ジョブの成功後に<code>dist/</code>がアップロードされ、<code>github-pages</code>環境へデプロイされる。ActionsのデプロイURLを確認する。</li></ol>
+<p>プルリクエストでは検証だけを行い、公開しません。手動デプロイは既定ブランチから実行した場合だけ有効です。検証ジョブはNode.js 22とPlaywrightを使い、公開物自体には依存ライブラリを含めません。</p>
+<pre><code>dist/
+  index.html             本編・目次・全本文
+  implementation.html    この説明ページ
+  demo.html              階層・指定ジャンプの小さな実例
+  presentation.js        共通の操作コントローラー
+  style.css              レイアウト・レスポンシブ・印刷
+  talk.css               無地背景・固定スライド・段階表示
+  assets/                HTMLのimgから参照する説明図
+  favicon.svg
+manuscript/              元原稿（公開対象外）
+scripts/validate.mjs     UTF-8・構造・リンクの検証
+tests/navigation.spec.js ブラウザーでの回帰テスト
+playwright.config.js     PC・モバイル・サブパス検証設定
+.github/workflows/pages.yml</code></pre>
+<p>Pagesへの実デプロイには、対象リポジトリへの配置と上記のPages設定が必要です。このプロジェクトのワークフローはそのための配線です。</p>
+<p class="small">参照：<a class="branch-link" href="https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages">GitHub公式ドキュメント：カスタムワークフローによるPages公開 ↗</a></p>
+<h2 id="checks">06 / 検証</h2>
+<p>静的検証ではUTF-8、重複ID、スライドの親子関係、直下の本文、各方向のジャンプ先、相対リンクのファイルを確認します。ブラウザーテストでは階層移動、同階層の移動、指定ジャンプ、URL復元、履歴、目次、キー入力の抑制を確認します。</p>
+<p>動作確認用デッキには、子ページが2つある親と3階層目のページ、方向属性によるジャンプ、キー入力確認用の入力欄を用意しています。</p>
+<a class="branch-link" href="demo.html">小さなデッキで操作する →</a>
+<h2 id="manuscript">07 / 原稿について</h2>
+<p>元の<code>battleemulator.md</code>と<code>battleemulatorv2.txt</code>は、変更せず<code>manuscript/</code>へ残しています。記事は後者を主に使い、発表しやすい10章と補足ページへ再構成しました。原稿の性能値や成果を新しい検証結果として扱わず、原稿内で表記が食い違うタイマーの数値には注記を添えています。</p>
+<p>本文を変更するときは<code>index.html</code>を編集してください。JavaScriptへの本文追加は不要です。</p>
+</main>
+</div>
+</body>
+</html>
