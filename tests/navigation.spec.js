@@ -1,5 +1,33 @@
 import { test, expect } from '@playwright/test';
 const current = page => page.locator('deck-slide[active]');
+test('catalog opens an independent talk and returns to the list', async ({ page }) => {
+  await page.goto('./');
+  await expect(page.getByRole('heading', { name: '発表資料', exact: true })).toBeVisible();
+  await expect(page.locator('presentation-deck')).toHaveCount(0);
+  await page.getByRole('link', { name: /バトルエミュレーター/ }).click();
+  await at(page, 'intro');
+  await page.getByRole('link', { name: '発表一覧', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '発表資料', exact: true })).toBeVisible();
+  await page.goto('example/');
+  await at(page, 'title');
+  await page.keyboard.press('ArrowRight'); await at(page, 'topic');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowDown'); await at(page, 'detail');
+  await page.keyboard.press('ArrowUp'); await at(page, 'topic');
+  await expect(page).toHaveURL(/#topic\/1$/);
+});
+test('camera supplement restores progress and stays within the slide', async ({ page }) => {
+  await page.goto('16c10/#camera/4');
+  await page.keyboard.press('ArrowRight'); await at(page, 'row4');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowDown'); await at(page, 'stack-residue');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowUp');
+  await expect(page).toHaveURL(/#row4\/2$/);
+  await page.keyboard.press('ArrowDown');
+  await expect(page).toHaveURL(/#stack-residue\/1$/);
+});
 async function at(page, id) {
   await expect(current(page)).toHaveAttribute('id', id);
   await expect(page.locator('.slide-body:visible')).toHaveCount(1);
@@ -17,7 +45,7 @@ test('four directions, siblings, deep nesting, explicit jumps, boundaries', asyn
   await at(page, 'deep');
 });
 test('fragment, reload, browser history, invalid fragment', async ({ page }) => {
-  await page.goto('index.html#random');
+  await page.goto('16c10/#random');
   await at(page, 'random');
   await page.keyboard.press('ArrowDown');
   await at(page, 'timer');
@@ -27,11 +55,11 @@ test('fragment, reload, browser history, invalid fragment', async ({ page }) => 
   await at(page, 'random');
   await page.goForward();
   await at(page, 'timer');
-  await page.goto('index.html#%E0%A4%A');
+  await page.goto('16c10/#%E0%A4%A');
   await at(page, 'intro');
 });
 test('overview, touch buttons, keyboard exclusions, Home and End', async ({ page }) => {
-  await page.goto('index.html');
+  await page.goto('16c10/');
   await page.keyboard.press('m');
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByRole('dialog').getByRole('link', { name: 'ゲーム内タイマー', exact: true }).click();
@@ -54,7 +82,7 @@ test('overview, touch buttons, keyboard exclusions, Home and End', async ({ page
   await page.locator('#a-title').click();
   await page.keyboard.press('Shift+ArrowRight');
   await at(page, 'a');
-  await page.goto('index.html#case');
+  await page.goto('16c10/#case');
   await page.keyboard.press('ArrowRight');
   await page.getByRole('region', { name: /イシュダル戦の抜粋/ }).click();
   await page.keyboard.press('ArrowRight');
@@ -67,17 +95,19 @@ test('overview, touch buttons, keyboard exclusions, Home and End', async ({ page
 test('all slides render without horizontal overflow or JS errors', async ({ page }) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  await page.goto('index.html');
+  await page.goto('16c10/');
   const ids = await page.locator('deck-slide').evaluateAll(nodes => nodes.map(n => n.id));
   for (const id of ids) {
-    await page.goto('index.html#' + id + '/999');
+    await page.goto('16c10/#' + id + '/999');
     await at(page, id);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), id).toBe(true);
     expect(await page.locator('deck-slide[active] > .slide-body').evaluate(panel => {
       const outer = panel.getBoundingClientRect();
+      const footer = panel.querySelector('.slide-bottom')?.getBoundingClientRect();
       return [...panel.querySelectorAll('h1,h2,h3,p,li,img,table,figcaption')].every(element => {
         const box = element.getBoundingClientRect();
-        return box.bottom <= outer.bottom + 1 && box.right <= outer.right + 1 && box.left >= outer.left - 1;
+        return box.bottom <= outer.bottom + 1 && box.right <= outer.right + 1 && box.left >= outer.left - 1
+          && (!footer || element.closest('.slide-bottom') || box.bottom <= footer.top + 1);
       });
     }), id).toBe(true);
   }
@@ -90,16 +120,16 @@ test('all slides render without horizontal overflow or JS errors', async ({ page
 test('source remains readable without JavaScript; all slides print', async ({ browser, baseURL, page }) => {
   const context = await browser.newContext({ javaScriptEnabled: false });
   const plain = await context.newPage();
-  await plain.goto(new URL('index.html', baseURL).href);
+  await plain.goto(new URL('16c10/', baseURL).href);
   await expect(plain.getByRole('heading', { name: 'バトルエミュレーター', exact: true })).toBeVisible();
   await expect(plain.locator('#future-title')).toBeVisible();
   await context.close();
-  await page.goto('index.html');
+  await page.goto('16c10/');
   await page.emulateMedia({ media: 'print' });
-  await expect(page.locator('.slide-body:visible')).toHaveCount(16);
+  await expect(page.locator('.slide-body:visible')).toHaveCount(19);
 });
 test('right reveals one step, then advances; left reverses; URL retains step', async ({ page }) => {
-  await page.goto('index.html#origin');
+  await page.goto('16c10/#origin');
   await expect(page.locator('#origin > .slide-body > deck-fragment:not([data-pending])')).toHaveCount(0);
   for (let step = 1; step <= 4; step++) {
     await page.keyboard.press('ArrowRight');
@@ -112,7 +142,7 @@ test('right reveals one step, then advances; left reverses; URL retains step', a
   await page.keyboard.press('ArrowLeft');
   await page.reload();
   await expect(page.locator('#origin > .slide-body > deck-fragment:not([data-pending])')).toHaveCount(3);
-  await page.goto('index.html#timer');
+  await page.goto('16c10/#timer');
   await expect(page.locator('#timer > .slide-body img')).not.toBeVisible();
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('#timer > .slide-body img')).not.toBeVisible();
@@ -121,7 +151,7 @@ test('right reveals one step, then advances; left reverses; URL retains step', a
   expect(await page.locator('#timer > .slide-body img').evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
 });
 test('vertical travel restores each slide step; only forward actions fade', async ({ page }) => {
-  await page.goto('index.html#random/2');
+  await page.goto('16c10/#random/2');
   for (const [key, hash] of [
     ['ArrowDown', '#timer'], ['ArrowRight', '#timer/1'], ['ArrowRight', '#timer/2'],
     ['ArrowDown', '#timer-note'], ['ArrowRight', '#timer-note/1'],

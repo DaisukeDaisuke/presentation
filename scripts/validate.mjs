@@ -7,7 +7,7 @@ const errors = [];
 const fail = message => errors.push(message);
 const decoder = new TextDecoder('utf-8', { fatal: true });
 const voidTags = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
-const files = (await readdir(root)).filter(name => /\.(html|css|js|svg)$/.test(name));
+const files = (await readdir(root, { recursive: true })).filter(name => /\.(html|css|js|svg)$/.test(name));
 const documents = new Map();
 for (const file of files) {
   const bytes = await readFile(path.join(root, file));
@@ -75,10 +75,12 @@ for (const [file, { nodes, ids }] of documents) {
       const [filename, hash] = value.split('#');
       if (!filename && hash && !ids.has(decodeURIComponent(hash))) fail(`${file}: missing anchor ${value}`);
       if (filename) {
-        const resolved = path.resolve(root, path.dirname(file), filename.split('?')[0]);
+        const localName = filename.split('?')[0];
+        const resolved = path.resolve(root, path.dirname(file), localName, localName.endsWith('/') ? 'index.html' : '');
         if (!resolved.startsWith(root + path.sep)) { fail(`${file}: reference outside dist: ${value}`); continue; }
         try { await access(resolved); } catch { fail(`${file}: missing local file ${value}`); }
-        if (hash && documents.has(filename) && !documents.get(filename).ids.has(decodeURIComponent(hash))) fail(`${file}: missing destination anchor ${value}`);
+        const target = documents.get(path.relative(root, resolved));
+        if (hash && target && !target.ids.has(decodeURIComponent(hash))) fail(`${file}: missing destination anchor ${value}`);
       }
     }
   }

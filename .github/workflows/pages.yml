@@ -22,7 +22,7 @@ jobs:
       - name: Validate UTF-8, HTML structure, and local links
         run: node scripts/validate.mjs
       - name: Check shared JavaScript syntax
-        run: node --check dist/presentation.js
+        run: node --check dist/engine/presentation.js
       - name: Install browser-test dependency
         run: npm install --ignore-scripts --no-audit --no-fund
       - name: Install Chromium
